@@ -492,6 +492,18 @@ class MLATokenToKVPool(KVCache):
         flat_data = flat_data.to(device=self.device, non_blocking=False)
         self.kv_buffer[layer_id][indices] = flat_data
 
+    def get_contiguous_buf_infos(self):
+        kv_data_ptrs = [
+                           self.get_key_buffer(i).data_ptr() for i in range(self.layer_num)
+                       ] + [self.get_value_buffer(i).data_ptr() for i in range(self.layer_num)]
+        kv_data_lens = [
+                           self.get_key_buffer(i).nbytes for i in range(self.layer_num)
+                       ] + [self.get_value_buffer(i).nbytes for i in range(self.layer_num)]
+        kv_item_lens = [
+                           self.get_key_buffer(i)[0].nbytes for i in range(self.layer_num)
+                       ] + [self.get_value_buffer(i)[0].nbytes for i in range(self.layer_num)]
+        return kv_data_ptrs, kv_data_lens, kv_item_lens
+
 
 class DoubleSparseTokenToKVPool(KVCache):
     def __init__(
