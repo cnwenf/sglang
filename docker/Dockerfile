@@ -1,6 +1,6 @@
 ARG CUDA_VERSION=12.5.1
 
-FROM nvcr.io/nvidia/tritonserver:24.04-py3-min
+FROM nvcr.io/nvidia/pytorch:25.03-py3
 
 ARG BUILD_TYPE=all
 ENV DEBIAN_FRONTEND=noninteractive
@@ -25,6 +25,17 @@ RUN echo 'tzdata tzdata/Areas select America' | debconf-set-selections \
 RUN pip3 install datamodel_code_generator
 
 WORKDIR /sgl-workspace
+
+RUN git clone https://github.com/ai-dynamo/nixl.git  \
+	&& cd nixl \
+	&& pip install meson \
+	&& meson setup build \
+	&& cd build \
+	&& meson configure -Ducx_path=/opt/hpcx/ucx \
+	&& ninja \
+	&& ninja install \
+	&& cd .. \
+	&& pip install .
 
 ARG CUDA_VERSION
 RUN python3 -m pip install --upgrade pip setuptools wheel html5lib six \
