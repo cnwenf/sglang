@@ -26,6 +26,11 @@ RUN pip3 install datamodel_code_generator
 
 WORKDIR /sgl-workspace
 
+ENV CPATH=/opt/hpcx/ucx/include:$CPATH
+ENV LIBRARY_PATH=/opt/hpcx/ucx/lib:$LIBRARY_PATH
+ENV LD_LIBRARY_PATH=/opt/hpcx/ucx/lib:$LD_LIBRARY_PATH
+ENV PKG_CONFIG_PATH=/opt/hpcx/ucx/lib/pkgconfig:$PKG_CONFIG_PATH
+
 RUN git clone https://github.com/ai-dynamo/nixl.git  \
 	&& cd nixl \
 	&& pip install meson \
@@ -39,7 +44,7 @@ RUN git clone https://github.com/ai-dynamo/nixl.git  \
 
 ARG CUDA_VERSION
 RUN python3 -m pip install --upgrade pip setuptools wheel html5lib six \
-    && git clone --depth=1 https://github.com/sgl-project/sglang.git \
+    && git clone -b nixl --depth=1 https://github.com/cnwenf/sglang.git  \
     && if [ "$CUDA_VERSION" = "12.1.1" ]; then \
          export CUINDEX=121; \
        elif [ "$CUDA_VERSION" = "12.4.1" ]; then \
@@ -55,5 +60,17 @@ RUN python3 -m pip install --upgrade pip setuptools wheel html5lib six \
     && python3 -m pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu${CUINDEX} \
     && cd sglang \
     && python3 -m pip --no-cache-dir install -e "python[${BUILD_TYPE}]" --find-links https://flashinfer.ai/whl/cu${CUINDEX}/torch2.5/flashinfer-python
+
+
+
+RUN wget -qO - http://mirrors.cloud.aliyuncs.com/erdma/GPGKEY | sudo gpg --dearmour -o /etc/apt/trusted.gpg.d/erdma.gpg \
+	&& echo "deb [ ] http://mirrors.cloud.aliyuncs.com/erdma/apt/ubuntu jammy/erdma main" | sudo tee /etc/apt/sources.list.d/erdma.list \
+	&& apt update \
+	&& apt remove libibverbs1 ibverbs-providers ibverbs-utils librdmacm1 -y \
+	&& apt install libibverbs1 ibverbs-providers ibverbs-utils librdmacm1 -y \
+	&& DEBIAN_FRONTEND=noninteractive apt install tzdata -y \
+	&& ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+	&& unlink /opt/hpcx/nccl_rdma_sharp_plugin/lib/libnccl-net.so \
+	ibv_devinfo
 
 ENV DEBIAN_FRONTEND=interactive
